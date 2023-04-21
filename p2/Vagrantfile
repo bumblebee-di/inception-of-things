@@ -23,14 +23,14 @@ Vagrant.configure("2") do |config|
     server.vm.network "private_network", ip: masterIp
     server.vm.provider "virtualbox" do |v|
       v.name = "bgoat"
-      v.memory = 2048
-      v.cpus = 2
+      v.memory = 1024
+      v.cpus = 1
     end
 
     server.vm.provision "shell", privileged: true, inline:  <<-SHELL
       sudo apt-get update
       apt-get install curl net-tools -y
-      export INSTALL_K3S_EXEC="--bind-address=#{masterIp} --node-external-ip=#{masterIp} --flannel-iface=eth1 --write-kubeconfig-mode 644"
+      export INSTALL_K3S_EXEC="--bind-address=#{masterIp} --flannel-iface=eth1  --no-deploy traefik"
       curl -sfL https://get.k3s.io | sh -
       kubectl apply -f /home/vagrant/vagrant/confs
   SHELL
