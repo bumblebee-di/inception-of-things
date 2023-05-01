@@ -19,7 +19,8 @@ Vagrant.configure("2") do |config|
 
   config.vm.network "forwarded_port", guest: 80, host: 80 
   config.vm.network "forwarded_port", guest: 8080, host: 8080
-  # config.vm.network "forwarded_port", guest: 6443, host: 6443
+  config.vm.network "forwarded_port", guest: 8888, host: 8888
+  config.vm.network "forwarded_port", guest: 6443, host: 6443
   
   config.vm.define "bgoat_p3" do | server |
     server.vm.hostname = "bgoatS"

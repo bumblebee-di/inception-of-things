@@ -43,6 +43,7 @@ curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
 # Install cluster
 # https://www.sokube.io/en/blog/gitops-on-a-laptop-with-k3d-and-argocd-en
 
+# sudo k3d cluster create mycluster -p "8080:30080@agent:0" --agents 2
 sudo k3d cluster create iot &&
 sudo kubectl create namespace argocd &&
 
@@ -51,7 +52,7 @@ sudo kubectl create namespace argocd &&
 
 sudo kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 # sudo kubectl wait --for=condition=Ready pods --all -n argocd
-sleep 20 #??? for pods gets up
+sleep 30 #??? for pods gets up
 # Получить пароль в декодированном виде:
 # OR https://bcrypt-generator.com/
 # sudo kubectl -n argocd patch secret argocd-secret
@@ -74,3 +75,5 @@ sudo kubectl apply -f /home/vagrant/vagrant/confs/app.yaml -n argocd
 # argocd login localhost:8080
 # argocd app create playground --repo https://github.com/bumblebee-di/inception-of-things-p3.git --path manifests --dest-server https://kubernetes.default.svc --dest-namespace dev
 sudo kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath={.data.password} | base64 -d ; echo
+
+# sudo kubectl port-forward app-deployment-85dd49fff8-v6kgj -n dev 8888:8888 --address-0.0.0.0 > /dev/null 2>&1
