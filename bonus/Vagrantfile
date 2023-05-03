@@ -1,0 +1,39 @@
+# export VAGRANT_HOME="$HOME/goinfre/.vagrant.d"
+
+# local box will be used
+# box generic/alpine38 (v4.2.14 currently released version) is downloaded from https://app.vagrantup.com/debian/boxes/bullseye64 (https://app.vagrantup.com/centos/boxes/7)
+# as CentOS-7-x86_64-Vagrant-2004_01.VirtualBox.box
+# than run  [ vagrant box add debian_bullseye64 ~/goinfre/debian_bullseye64   #CentOS-7-x86_64-Vagrant-2004_01.VirtualBox.box ]
+# program output:
+# ==> box: Box file was not detected as metadata. Adding it directly...
+# ==> box: Adding box 'debian_bullseye64' (v0) for provider:
+    # box: Unpacking necessary files from: file:///Users/bgoat/goinfre/8735b8d8-9dfe-402b-8985-de3192b1a1d9
+# ==> box: Successfully added box 'debian_bullseye64' (v0) for 'virtualbox'!
+# after that [vagrant up] can be used
+
+masterIp="192.168.56.110"
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "debian_bullseye64"
+  # config.vm.synced_folder "./confs", "/home/vagrant/vagrant/confs"
+
+  config.vm.network "forwarded_port", guest: 8080, host: 8480
+  config.vm.network "forwarded_port", guest: 8888, host: 8488
+  
+  
+  config.vm.define "bgoat_bonus" do | server |
+    server.vm.hostname = "bgoatS"
+    server.vm.network "private_network", ip: masterIp
+    server.vm.provider "virtualbox" do |v|
+      v.name = "bgoat_bonus"
+      v.memory = 2048
+      v.cpus = 2
+    end
+
+    id_rsa_pub = File.read("#{ENV['HOME']}/.ssh/id_rsa.pub")
+    config.vm.provision "shell", privileged: true, inline:  <<-SHELL
+      echo '#{id_rsa_pub}' >> /home/vagrant/.ssh/authorized_keys
+    SHELL
+  end
+    
+end

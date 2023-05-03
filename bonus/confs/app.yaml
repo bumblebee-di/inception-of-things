@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: iot-app-argocd
+spec:
+  project: development
+  source:
+    repoURL: https://github.com/bumblebee-di/inception-of-things-p3.git
+    targetRevision: nodeport
+    path: manifests
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true

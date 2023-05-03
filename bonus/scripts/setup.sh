@@ -38,15 +38,34 @@ curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash &&
 echo "source <(k3d completion bash)" >> ~/.bashrc
 source ~/.bashrc
 
+# Install Helm
+printf "==========\nInstalling Helm\n==========\n"
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 &&
+sudo chmod 700 get_helm.sh &&
+sudo ./get_helm.sh &&
+
 # Install cluster
 # https://www.sokube.io/en/blog/gitops-on-a-laptop-with-k3d-and-argocd-en
 
 printf "==========\nCreating cluster\n==========\n"
 # sudo k3d cluster create mycluster -p "8080:30080@agent:0" --agents 2
-sudo k3d cluster create iot &&
+sudo k3d cluster create iot -p "8888:30080@agent:0" --agents 1 &&
 printf "==========\nCreating namespaces\n==========\n"
 sudo kubectl create namespace argocd &&
 sudo kubectl create namespace dev &&
+sudo kubectl create namespace gitlab &&
+
+# Deploy the GitLab Helm chart
+# Install GitLab
+printf "==========\nInstalling GitLab\n==========\n"
+helm repo add gitlab https://charts.gitlab.io/ &&
+sudo helm repo update
+sudo helm upgrade --install gitlab gitlab/gitlab \
+  --timeout 600s \
+  --set global.hosts.domain=example.com \
+  --set global.hosts.externalIP=10.10.10.10 \
+  --set certmanager-issuer.email=me@example.com \
+  --set postgresql.image.tag=13.6.0
 
 # Install ArgoCD into argocd NAMESPACE
 # https://yashguptaa.medium.com/application-deploy-to-kubernetes-with-argo-cd-and-k3d-8e29cf4f83ee
@@ -74,8 +93,8 @@ sudo kubectl get svc -n argocd &&
 
 sudo kubectl port-forward svc/argocd-server -n argocd 8080:443  --address=0.0.0.0 > /dev/null 2>&1 &
 
-sudo kubectl apply -f /home/vagrant/vagrant/confs/project.yaml -n argocd
-sudo kubectl apply -f /home/vagrant/vagrant/confs/app.yaml -n argocd
+sudo kubectl apply -f /home/vagrant/confs/project.yaml -n argocd
+sudo kubectl apply -f /home/vagrant/confs/app.yaml -n argocd
 
 # # check nodes on argocd namespace
 # # kubectl get pods -n argocd
@@ -83,7 +102,7 @@ sudo kubectl apply -f /home/vagrant/vagrant/confs/app.yaml -n argocd
 
 # Получить пароль в декодированном виде:
 echo "==========get password=========="
-sudo kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath={.data.password} | base64 -d ; echo
+sudo kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath={.data.password} | base64 -d > $HOME/.pass
 echo "================================"
 
 # argocd login localhost:8080
