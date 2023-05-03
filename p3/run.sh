@@ -60,7 +60,7 @@ if [ -n "$1" -a "$1" == "f" ]; then {
     scp -r -P 2222 -o StrictHostKeyChecking=no ./confs vagrant@localhost:. 
 
     printf "${green}Выполняем развертывание${clear}\n"
-    ssh -o StrictHostKeyChecking=no -q vagrant@localhost -p 2222 "bash -s" < ./p3.sh
+    ssh -o StrictHostKeyChecking=no -q vagrant@localhost -p 2222 "bash -s" < ./scripts/setup.sh
     # ssh -o StrictHostKeyChecking=no -q vagrant@localhost -p 2222 "bash -s" < ./scripts/cluster.sh
 }
 fi
