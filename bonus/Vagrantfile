@@ -26,8 +26,8 @@ Vagrant.configure("2") do |config|
     server.vm.network "private_network", ip: masterIp
     server.vm.provider "virtualbox" do |v|
       v.name = "bgoat_bonus"
-      v.memory = 2048
-      v.cpus = 2
+      v.memory = 8192
+      v.cpus = 6
     end
 
     id_rsa_pub = File.read("#{ENV['HOME']}/.ssh/id_rsa.pub")
