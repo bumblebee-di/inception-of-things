@@ -44,84 +44,72 @@ curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scrip
 sudo chmod 700 get_helm.sh &&
 sudo ./get_helm.sh &&
 
-# Install cluster
-# https://www.sokube.io/en/blog/gitops-on-a-laptop-with-k3d-and-argocd-en
+echo "->creating k3d cluster:"
+sudo k3d cluster create bonus \
+	--port 8080:80@loadbalancer \
+	--port 8888:30080@agent:0 --agents 1
 
-printf "==========\n\033[32mCreating cluster\033[0m\n==========\n"
-# sudo k3d cluster create mycluster -p "8080:30080@agent:0" --agents 2
-sudo k3d cluster create iot -p "8888:30080@agent:0" --agents 1 &&
-printf "==========\n\033[32mCreating namespaces\033[0m\n==========\n"
-sudo kubectl create namespace argocd &&
-sudo kubectl create namespace dev &&
-sudo kubectl create namespace gitlab &&
+sleep 60
 
-# Deploy the GitLab Helm chart
-# Install GitLab
-printf "==========\n\033[32mSetting gitlab repo\033[0m\n==========\n"
+echo "->Installing gitlab:"
+sudo kubectl create namespace gitlab
+
 while 
   sudo helm repo add gitlab https://charts.gitlab.io/
   [ $? -gt 0 ]
 do :; done
-sudo helm repo list
-sudo helm repo update
-# while [ $? -gt 0 ]; do
-while [[ ! "$(sudo helm repo update)" =~ "...Successfully got an update from the \"gitlab\" chart repository" ]]; do
-  echo 'Trying to update helm repo...'
-done
-printf "==========\n\033[32mInstalling GitLab\033[0m\n==========\n"
-sleep 20
-sudo helm install gitlab gitlab/gitlab -n gitlab \
-  --set global.ingress.configureCertmanager="false" \
-  --set certmanager-issuer.email=sibogatovrm@gmail.com \
-  --timeout 600s \
-  --set global.hosts.domain=192.168.56.11.nip.io \
-  --set global.hosts.externalIP=192.168.56.110 \
-  --set global.hosts.https=false \
-  --set gitlab-runner.install="false" &&
 
-# Install ArgoCD into argocd NAMESPACE
-# https://yashguptaa.medium.com/application-deploy-to-kubernetes-with-argo-cd-and-k3d-8e29cf4f83ee
+sudo helm install -n gitlab gitlab gitlab/gitlab -f /home/vagrant/confs/values-minimal.yaml 
 
-sudo kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml &&
-printf "==========\n\033[32mWaiting for pods\033[0m\n==========\n"
-sleep 40 && #??? for pods gets up
-# OR
-# sudo kubectl wait --for=condition=Ready pods --all -n argocd &&
+echo "->Installing AgoCD"
+sudo kubectl create namespace argocd
+curl https://raw.githubusercontent.com/argoproj/argo-cd/master/manifests/install.yaml | sudo kubectl apply -n argocd -f -
 
-# check nodes on argocd namespace
-printf "==========\n\033[32mGet pods\033[0m\n==========\n"
-sudo docker ps &&
-sudo kubectl get pods -n argocd &&
-sudo kubectl get nodes -n argocd &&
-sudo kubectl get svc -n argocd #&&
+# sleep 30
+while 
+  sudo kubectl wait --for=condition=Ready pods --all -n argocd 
+  [ $? -ne 0 ]
+do :; done
 
-# OR https://bcrypt-generator.com/
-# sudo kubectl -n argocd patch secret argocd-secret
-#   -p '{"stringData":  {
-#     "admin.password": "$2a$12$6FIwz3pyhYL.H2yTxePgWu.LJLrUTItSMcln/pJIF9t9K7ypIKddO",
-#     "admin.passwordMtime": "'$(date +%FT%T%Z)'"
-#   }}'
+sudo kubectl -n argocd set env deployment/argocd-server ARGOCD_SERVER_INSECURE=true
 
-sudo git clone https://github.com/bumblebee-di/inception-of-things-p3.git &&
-cd inception-of-things-p3 && sudo git remote set-url origin http://192.168.56.110.nip.io:8080/root/iot.git &&
+sudo kubectl create namespace dev
+echo "->Setup ingress and wilsApps"
+kubectl apply -n argocd -f ./confs/ingress-argocd.yaml
+sudo kubectl apply -n gitlab -f ./confs/ingress-gitlab.yaml
 
+while 
+  sudo kubectl get secret  gitlab-gitlab-initial-root-password -n gitlab
+  [ $? -ne 0 ]
+do :; done
 
-sudo kubectl port-forward svc/argocd-server -n argocd 8080:443  --address=0.0.0.0 > /dev/null 2>&1 &
+export GIT_PASS=$(sudo kubectl -n gitlab get secret gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 -d )
+sed -i "s/password:/password: ${GIT_PASS}/g" ./confs/secret.yaml
 
-# sudo kubectl apply -f /home/vagrant/confs/project.yaml -n argocd
-sudo kubectl apply -f /home/vagrant/confs/app.yaml -n argocd
+sudo kubectl apply -f ./confs/secret.yaml -n argocd
 
-# # check nodes on argocd namespace
-# # kubectl get pods -n argocd
+echo "->Wait for gitlab to be ready"
+sudo kubectl wait --for=condition=complete -n gitlab --timeout=600s job/gitlab-migrations-1
+
+echo " ----> Commandes suivantes : Create first repo with the UI"
+git clone  --branch nodeport https://github.com/bumblebee-di/inception-of-things-p3.git
+cd inception-of-things-p3
+git remote set-url origin http://gitlab.192.168.56.110.nip.io:8080/root/inception-of-things-p3.git
+git config --global --add safe.directory /home/vagrant/inception-of-things-p3
+# git push origin master
+git config --global user.name "root"
+git push http://root:${GIT_PASS}@gitlab.192.168.56.110.nip.io:8080/root/inception-of-things-p3.git
+cd ..
+
+# sudo kubectl port-forward svc/argocd-server -n argocd 8433:443  --address=0.0.0.0 > /dev/null 2>&1 &
+
+sleep 10
+echo "---> don't forget to apply wilsapp after creating and updating the repo"
+sudo kubectl apply -n argocd -f /home/vagrant/confs/app.yaml
 
 
-# Получить пароль в декодированном виде:
-echo "==========get password=========="
-sudo kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath={.data.password} | base64 -d > $HOME/.pass
-echo "================================"
+sleep 15
+sudo kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d ; echo
+sudo kubectl -n gitlab get secret gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 -d ; echo
 
-# argocd login localhost:8080
-# argocd app create playground --repo https://github.com/bumblebee-di/inception-of-things-p3.git --path manifests --dest-server https://kubernetes.default.svc --dest-namespace dev
-# sudo kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath={.data.password} | base64 -d ; echo
-
-# sudo kubectl port-forward app-deployment-85dd49fff8-v6kgj -n dev 8888:8888 --address-0.0.0.0 > /dev/null 2>&1
+sudo kubectl -n argocd set env deployment/argocd-server ARGOCD_SERVER_INSECURE=true
