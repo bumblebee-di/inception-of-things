@@ -44,14 +44,14 @@ curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scrip
 sudo chmod 700 get_helm.sh &&
 sudo ./get_helm.sh &&
 
-echo "->creating k3d cluster:"
+printf "==========\nCreating cluster\n==========\n"
 sudo k3d cluster create bonus \
 	--port 8080:80@loadbalancer \
-	--port 8888:30080@agent:0 --agents 1
+	--port 8888:30080@agent:0 --agents 1 &&
 
-sleep 60
+sleep 60 &&
 
-echo "->Installing gitlab:"
+printf "==========\nInstalling пшедфи\n==========\n"
 sudo kubectl create namespace gitlab
 
 while 
@@ -61,7 +61,7 @@ do :; done
 
 sudo helm install -n gitlab gitlab gitlab/gitlab -f /home/vagrant/confs/values-minimal.yaml 
 
-echo "->Installing AgoCD"
+printf "==========\nInstalling argocd\n==========\n"
 sudo kubectl create namespace argocd
 curl https://raw.githubusercontent.com/argoproj/argo-cd/master/manifests/install.yaml | sudo kubectl apply -n argocd -f -
 
@@ -74,10 +74,13 @@ do :; done
 sudo kubectl -n argocd set env deployment/argocd-server ARGOCD_SERVER_INSECURE=true
 
 sudo kubectl create namespace dev
-echo "->Setup ingress and wilsApps"
+
+printf "==========\nSetup ingress\n==========\n"
 kubectl apply -n argocd -f ./confs/ingress-argocd.yaml
 sudo kubectl apply -n gitlab -f ./confs/ingress-gitlab.yaml
 
+
+printf "==========\nSetup secret\n==========\n"
 while 
   sudo kubectl get secret  gitlab-gitlab-initial-root-password -n gitlab
   [ $? -ne 0 ]
@@ -88,10 +91,10 @@ sed -i "s/password:/password: ${GIT_PASS}/g" ./confs/secret.yaml
 
 sudo kubectl apply -f ./confs/secret.yaml -n argocd
 
-echo "->Wait for gitlab to be ready"
+printf "==========\nWait for gitlab to be ready\n==========\n"
 sudo kubectl wait --for=condition=complete -n gitlab --timeout=600s job/gitlab-migrations-1
 
-echo " ----> Commandes suivantes : Create first repo with the UI"
+printf "==========\nPrepare Gitlab repo\n==========\n"
 git clone  --branch nodeport https://github.com/bumblebee-di/inception-of-things-p3.git
 cd inception-of-things-p3
 git remote set-url origin http://gitlab.192.168.56.110.nip.io:8080/root/inception-of-things-p3.git
@@ -104,12 +107,14 @@ cd ..
 # sudo kubectl port-forward svc/argocd-server -n argocd 8433:443  --address=0.0.0.0 > /dev/null 2>&1 &
 
 sleep 10
-echo "---> don't forget to apply wilsapp after creating and updating the repo"
+printf "==========\nApply app\n==========\n"
 sudo kubectl apply -n argocd -f /home/vagrant/confs/app.yaml
 
 
 sleep 15
+echo "==========get password=========="
 sudo kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d ; echo
 sudo kubectl -n gitlab get secret gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 -d ; echo
+echo "================================"
 
 sudo kubectl -n argocd set env deployment/argocd-server ARGOCD_SERVER_INSECURE=true
