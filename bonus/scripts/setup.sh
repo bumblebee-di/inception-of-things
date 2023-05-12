@@ -51,7 +51,7 @@ sudo k3d cluster create bonus \
 
 sleep 60 &&
 
-printf "==========\nInstalling пшедфи\n==========\n"
+printf "==========\nInstalling gitlab\n==========\n"
 sudo kubectl create namespace gitlab
 
 while 
@@ -86,8 +86,7 @@ while
   [ $? -ne 0 ]
 do :; done
 
-export GIT_PASS=$(sudo kubectl -n gitlab get secret gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 -d )
-sed -i "s/password:/password: ${GIT_PASS}/g" ./confs/secret.yaml
+export GIT_PASS=$(sudo kubectl -n gitlab get secret gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 -d ) ; sed -i "s/password:/password: ${GIT_PASS}/g" ./confs/secret.yaml
 
 sudo kubectl apply -f ./confs/secret.yaml -n argocd
 
