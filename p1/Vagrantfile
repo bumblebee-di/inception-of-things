@@ -19,11 +19,11 @@ Vagrant.configure("2") do |config|
   config.vm.synced_folder "./shared_files", "/home/vagrant/vagrant", create: true
 
   id_rsa_pub = File.read("#{ENV['HOME']}/.ssh/id_rsa.pub")
-  config.vm.define "bgoat" do | server |
+  config.vm.define "bgoatS" do | server |
     server.vm.hostname = "bgoatS"
     server.vm.network "private_network", ip: masterIp
     server.vm.provider "virtualbox" do |v|
-      v.name = "bgoat"
+      v.name = "bgoatS"
       v.memory = 1024
       v.cpus = 1
     end
@@ -39,11 +39,11 @@ Vagrant.configure("2") do |config|
   SHELL
   end
 
-  config.vm.define "cmarsha" do | serverWorker |
+  config.vm.define "cmarshaSW" do | serverWorker |
     serverWorker.vm.hostname = "cmarshaSW"
     serverWorker.vm.network "private_network", ip: agentIp
     serverWorker.vm.provider "virtualbox" do |v|
-      v.name = "cmarsha"
+      v.name = "cmarshaSW"
       v.memory = 1024
       v.cpus = 1
     end
