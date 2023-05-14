@@ -57,10 +57,11 @@ if [ -n "$1" -a "$1" == "f" ]; then {
         fi
     done
     printf "${green}Copying yamls to ~/confs${clear}\n"
-    scp -r -P 2222 -o StrictHostKeyChecking=no ./confs vagrant@localhost:. 
+    scp -r -P 2222 -o StrictHostKeyChecking=no ./confs vagrant@localhost:.
+    scp -r -P 2222 -o StrictHostKeyChecking=no ./scripts vagrant@localhost:.
 
     printf "${green}Выполняем развертывание${clear}\n"
-    ssh -o StrictHostKeyChecking=no -q vagrant@localhost -p 2222 "bash -s" < ./scripts/setup.sh
+    ssh -o StrictHostKeyChecking=no -q vagrant@localhost -p 2222 "sudo bash -s" < ./scripts/setup.sh
     # ssh -o StrictHostKeyChecking=no -q vagrant@localhost -p 2222 "bash -s" < ./scripts/cluster.sh
 }
 fi

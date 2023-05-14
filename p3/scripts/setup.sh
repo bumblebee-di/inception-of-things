@@ -44,6 +44,8 @@ source ~/.bashrc
 printf "==========\nCreating cluster\n==========\n"
 # sudo k3d cluster create mycluster -p "8080:30080@agent:0" --agents 2
 sudo k3d cluster create iot -p "8888:30080@agent:0" --agents 1 &&
+sleep 60 &&
+
 printf "==========\nCreating namespaces\n==========\n"
 sudo kubectl create namespace argocd &&
 sudo kubectl create namespace dev &&
@@ -53,7 +55,11 @@ sudo kubectl create namespace dev &&
 
 sudo kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml &&
 printf "==========\nWaiting for pods\n"
-sleep 40 && #??? for pods gets up
+# sleep 40 && #??? for pods gets up
+while 
+  sudo kubectl wait --for=condition=Ready pods --all -n argocd 
+  [ $? -ne 0 ]
+do :; done
 printf "==========\n"
 # OR
 # sudo kubectl wait --for=condition=Ready pods --all -n argocd &&
@@ -74,8 +80,8 @@ sudo kubectl get svc -n argocd &&
 
 sudo kubectl port-forward svc/argocd-server -n argocd 8080:443  --address=0.0.0.0 > /dev/null 2>&1 &
 
-sudo kubectl apply -f /home/vagrant/confs/project.yaml -n argocd
-sudo kubectl apply -f /home/vagrant/confs/app.yaml -n argocd
+sudo kubectl apply -f /home/vagrant/confs/project.yaml -n argocd &&
+sudo kubectl apply -f /home/vagrant/confs/app.yaml -n argocd &&
 
 # # check nodes on argocd namespace
 # # kubectl get pods -n argocd
@@ -86,8 +92,3 @@ echo "==========get password=========="
 sudo kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath={.data.password} | base64 -d > $HOME/.pass
 echo "================================"
 
-# argocd login localhost:8080
-# argocd app create playground --repo https://github.com/bumblebee-di/inception-of-things-p3.git --path manifests --dest-server https://kubernetes.default.svc --dest-namespace dev
-# sudo kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath={.data.password} | base64 -d ; echo
-
-# sudo kubectl port-forward app-deployment-85dd49fff8-v6kgj -n dev 8888:8888 --address-0.0.0.0 > /dev/null 2>&1
