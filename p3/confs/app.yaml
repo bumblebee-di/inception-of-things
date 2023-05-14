@@ -5,7 +5,7 @@ metadata:
 spec:
   project: development
   source:
-    repoURL: https://github.com/bumblebee-di/inception-of-things-p3.git
+    repoURL: https://github.com/bumblebee-di/bgoat-inception-of-things-p3.git
     targetRevision: nodeport
     path: manifests
     directory:

@@ -11,22 +11,25 @@
 # ==> box: Successfully added box 'debian_bullseye64' (v0) for 'virtualbox'!
 # after that [vagrant up] can be used
 
+# scp -P 2202  scripts/setup.sh vagrant@localhost:/home/vagrant/setup.sh
+# ssh vagrant@localhost -p 2202
+
 masterIp="192.168.56.110"
 
 Vagrant.configure("2") do |config|
   config.vm.box = "debian_bullseye64"
-  # config.vm.synced_folder "./confs", "/home/vagrant/vagrant/confs"
-
-  config.vm.network "forwarded_port", guest: 8080, host: 8380
-  config.vm.network "forwarded_port", guest: 8888, host: 8388
+  # config.vm.synced_folder "./confs", "/home/vagrant/confs"
+  # config.vm.synced_folder "./scripts", "/home/vagrant/scripts"
+  config.vm.network "forwarded_port", guest: 8080, host: 8880
+  config.vm.network "forwarded_port", guest: 8888, host: 8888
   
-  config.vm.define "bgoat_p3" do | server |
-    server.vm.hostname = "bgoatS"
+  config.vm.define "p3" do | server |
+    server.vm.hostname = "bgoat"
     server.vm.network "private_network", ip: masterIp
     server.vm.provider "virtualbox" do |v|
-      v.name = "bgoat_p3"
-      v.memory = 2048
-      v.cpus = 2
+      v.name = "p3"
+      v.memory = 8192
+      v.cpus = 6
     end
 
     id_rsa_pub = File.read("#{ENV['HOME']}/.ssh/id_rsa.pub")

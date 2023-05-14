@@ -52,17 +52,17 @@ sudo k3d cluster create bonus \
 sleep 60 &&
 
 printf "==========\nInstalling gitlab\n==========\n"
-sudo kubectl create namespace gitlab
+sudo kubectl create namespace gitlab &&
 
 while 
   sudo helm repo add gitlab https://charts.gitlab.io/
   [ $? -gt 0 ]
 do :; done
 
-sudo helm install -n gitlab gitlab gitlab/gitlab -f /home/vagrant/confs/values-minimal.yaml 
+sudo helm install -n gitlab gitlab gitlab/gitlab -f /home/vagrant/confs/values-minimal.yaml  &&
 
 printf "==========\nInstalling argocd\n==========\n"
-sudo kubectl create namespace argocd
+sudo kubectl create namespace argocd  &&
 curl https://raw.githubusercontent.com/argoproj/argo-cd/master/manifests/install.yaml | sudo kubectl apply -n argocd -f -
 
 # sleep 30
@@ -71,13 +71,13 @@ while
   [ $? -ne 0 ]
 do :; done
 
-sudo kubectl -n argocd set env deployment/argocd-server ARGOCD_SERVER_INSECURE=true
+sudo kubectl -n argocd set env deployment/argocd-server ARGOCD_SERVER_INSECURE=true &&
 
-sudo kubectl create namespace dev
+sudo kubectl create namespace dev &&
 
 printf "==========\nSetup ingress\n==========\n"
-kubectl apply -n argocd -f ./confs/ingress-argocd.yaml
-sudo kubectl apply -n gitlab -f ./confs/ingress-gitlab.yaml
+kubectl apply -n argocd -f ./confs/ingress-argocd.yaml &&
+sudo kubectl apply -n gitlab -f ./confs/ingress-gitlab.yaml &&
 
 
 printf "==========\nSetup secret\n==========\n"
@@ -86,28 +86,28 @@ while
   [ $? -ne 0 ]
 do :; done
 
-export GIT_PASS=$(sudo kubectl -n gitlab get secret gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 -d ) ; sed -i "s/password:/password: ${GIT_PASS}/g" ./confs/secret.yaml
+export GIT_PASS=$(sudo kubectl -n gitlab get secret gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 -d ) ; sed -i "s/password:.*$/password: ${GIT_PASS}/g" ./confs/secret.yaml &&
 
-sudo kubectl apply -f ./confs/secret.yaml -n argocd
+sudo kubectl apply -f ./confs/secret.yaml -n argocd &&
 
 printf "==========\nWait for gitlab to be ready\n==========\n"
-sudo kubectl wait --for=condition=complete -n gitlab --timeout=600s job/gitlab-migrations-1
+sudo kubectl wait --for=condition=complete -n gitlab --timeout=600s job/gitlab-migrations-1 &&
 
 printf "==========\nPrepare Gitlab repo\n==========\n"
-git clone  --branch nodeport https://github.com/bumblebee-di/inception-of-things-p3.git
-cd inception-of-things-p3
-git remote set-url origin http://gitlab.192.168.56.110.nip.io:8080/root/inception-of-things-p3.git
-git config --global --add safe.directory /home/vagrant/inception-of-things-p3
+git clone  --branch nodeport https://github.com/bumblebee-di/bgoat-inception-of-things-p3.git &&
+cd bgoat-inception-of-things-p3 &&
+git remote set-url origin http://gitlab.192.168.56.110.nip.io:8080/root/bgoat-inception-of-things-p3.git &&
+git config --global --add safe.directory /home/vagrant/bgoat-inception-of-things-p3 &&
 # git push origin master
-git config --global user.name "root"
-git push http://root:${GIT_PASS}@gitlab.192.168.56.110.nip.io:8080/root/inception-of-things-p3.git
+git config --global user.name "root" &&
+export GIT_PASS=$(sudo kubectl -n gitlab get secret gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 -d ) ; git push http://root:${GIT_PASS}@gitlab.192.168.56.110.nip.io:8080/root/bgoat-inception-of-things-p3.git  &&
 cd ..
 
 # sudo kubectl port-forward svc/argocd-server -n argocd 8433:443  --address=0.0.0.0 > /dev/null 2>&1 &
 
 sleep 10
 printf "==========\nApply app\n==========\n"
-sudo kubectl apply -n argocd -f /home/vagrant/confs/app.yaml
+sudo kubectl apply -n argocd -f /home/vagrant/confs/app.yaml &&
 
 
 sleep 15
