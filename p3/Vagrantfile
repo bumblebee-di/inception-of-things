@@ -18,9 +18,9 @@ masterIp="192.168.56.110"
 
 Vagrant.configure("2") do |config|
   config.vm.box = "debian_bullseye64"
-  # config.vm.synced_folder "./confs", "/home/vagrant/vagrant/confs"
-
-  config.vm.network "forwarded_port", guest: 8080, host: 8080
+  # config.vm.synced_folder "./confs", "/home/vagrant/confs"
+  # config.vm.synced_folder "./scripts", "/home/vagrant/scripts"
+  config.vm.network "forwarded_port", guest: 8080, host: 8880
   config.vm.network "forwarded_port", guest: 8888, host: 8888
   
   config.vm.define "p3" do | server |
